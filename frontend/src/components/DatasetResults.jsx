@@ -124,7 +124,7 @@ function DatasetResults({ data }) {
                   <div className="issue-description">{item.description}</div>
 
                   {item.invalid_rows && item.invalid_rows.length > 0 && (
-                    <div style={{ marginTop: '1rem', overflowX: 'auto' }}>
+                    <div style={{ marginTop: '0.75rem', overflowX: 'auto', maxWidth: '100%' }}>
                       <table className="column-table">
                         <thead>
                           <tr>
@@ -178,7 +178,7 @@ function DatasetResults({ data }) {
                   </div>
 
                   {item.duplicate_groups && item.duplicate_groups.length > 0 && (
-                    <div style={{ marginTop: '1rem' }}>
+                    <div style={{ marginTop: '0.75rem' }}>
                       {item.duplicate_groups.map((group, groupIdx) => (
                         <div key={groupIdx} style={{ marginBottom: '1.5rem' }}>
                           <div style={{
@@ -192,7 +192,7 @@ function DatasetResults({ data }) {
                           }}>
                             Duplicate Group {groupIdx + 1} ({group.length} records)
                           </div>
-                          <div style={{ overflowX: 'auto' }}>
+                          <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
                             <table className="column-table">
                               <thead>
                                 <tr>
@@ -250,7 +250,7 @@ function DatasetResults({ data }) {
                   <div className="issue-description">{item.description}</div>
 
                   {item.issue_rows && item.issue_rows.length > 0 && (
-                    <div style={{ marginTop: '1rem', overflowX: 'auto' }}>
+                    <div style={{ marginTop: '0.75rem', overflowX: 'auto', maxWidth: '100%' }}>
                       <table className="column-table">
                         <thead>
                           <tr>
