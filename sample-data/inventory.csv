@@ -1,0 +1,16 @@
+product_id,product_name,category,supplier,cost_price,selling_price,current_stock,reorder_level,max_stock,last_restock_date,warehouse_location,quality_rating
+PROD_001,Wireless Headphones,Office,,12.13,7.92,12,45,480,2025-08-23,,
+PROD_002,Running Shoes,Office,Supplier D,19.62,29.75,166,40,904,2025-07-25,B2,2.0
+PROD_003,Coffee Maker,Home,Supplier A,98.82,193.88,30,16,482,2025-02-23,C1,2.5
+PROD_004,Smartphone Case,Sports,Supplier C,93.12,125.18,68,14,354,2025-04-22,C1,2.2
+PROD_005,Yoga Mat,Fashion,Supplier C,28.0,36.8,18,30,498,2025-03-16,A1,1.6
+PROD_006,Desk Lamp,Sports,Supplier C,79.29,61.82,378,30,388,2025-04-13,B1,2.9
+PROD_007,Water Bottle,Electronics,Supplier C,51.47,84.05,346,26,343,2025-03-04,A1,3.6
+PROD_008,Bluetooth Speaker,Home,Supplier A,48.46,108.93,408,13,216,2025-03-27,C1,2.7
+PROD_009,Notebook,Fashion,,12.89,23.92,25,30,541,2025-05-25,A1,3.9
+PROD_010,Pen Set,Electronics,Supplier B,60.88,150.16,399,17,787,2025-03-27,B2,3.4
+PROD_011,Mouse Pad,Sports,Supplier D,99.37,80.18,220,27,866,2025-09-04,B1,1.3
+PROD_012,USB Cable,Fashion,Supplier A,68.31,112.15,270,37,500,2025-04-25,A1,3.5
+PROD_013,Phone Charger,Fashion,Supplier C,45.1,54.62,9,37,890,2025-06-09,,4.1
+PROD_014,Backpack,Sports,Supplier C,57.91,118.7,102,46,393,2025-03-11,A2,1.8
+PROD_015,Sunglasses,Home,Supplier B,26.34,32.51,308,12,270,2025-03-20,B1,4.5
