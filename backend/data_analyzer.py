@@ -187,7 +187,16 @@ class DataQualityAnalyzer:
 
     def _validate_status(self) -> Dict[str, Any]:
         """Validate status values."""
-        valid_statuses = ['Active', 'Inactive', 'Suspended']
+        # Determine valid statuses based on dataset type
+        if 'transaction_id' in self.df.columns:
+            # Transaction dataset
+            valid_statuses = ['Completed', 'Failed', 'Pending']
+            description = "Status values that are not Completed, Failed, or Pending"
+        else:
+            # Customer dataset
+            valid_statuses = ['Active', 'Inactive', 'Suspended']
+            description = "Status values that are not Active, Inactive, or Suspended"
+
         non_null_status = self.df['status'].dropna()
         invalid = ~non_null_status.isin(valid_statuses)
         invalid_count = invalid.sum()
@@ -203,7 +212,7 @@ class DataQualityAnalyzer:
             "issue_type": "Invalid Value",
             "count": int(invalid_count),
             "percentage": round((invalid_count / self.total_records) * 100, 2),
-            "description": "Status values that are not Active, Inactive, or Suspended",
+            "description": description,
             "examples": non_null_status[invalid].unique().tolist() if invalid_count > 0 else [],
             "invalid_rows": invalid_rows
         }
