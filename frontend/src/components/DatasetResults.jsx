@@ -137,7 +137,11 @@ function DatasetResults({ data }) {
                           {item.invalid_rows.map((row, rowIdx) => (
                             <tr key={rowIdx}>
                               {Object.values(row).map((val, valIdx) => (
-                                <td key={valIdx}>{val !== null && val !== undefined ? String(val) : ''}</td>
+                                <td key={valIdx}>
+                                  {val !== null && val !== undefined && val !== '' ? String(val) : (
+                                    <span style={{ color: '#cbd5e0', fontStyle: 'italic' }}>null</span>
+                                  )}
+                                </td>
                               ))}
                             </tr>
                           ))}
@@ -201,7 +205,11 @@ function DatasetResults({ data }) {
                                 {group.map((row, rowIdx) => (
                                   <tr key={rowIdx}>
                                     {Object.values(row).map((val, valIdx) => (
-                                      <td key={valIdx}>{val !== null && val !== undefined ? String(val) : ''}</td>
+                                      <td key={valIdx}>
+                                        {val !== null && val !== undefined && val !== '' ? String(val) : (
+                                          <span style={{ color: '#cbd5e0', fontStyle: 'italic' }}>null</span>
+                                        )}
+                                      </td>
                                     ))}
                                   </tr>
                                 ))}
@@ -255,7 +263,11 @@ function DatasetResults({ data }) {
                           {item.issue_rows.map((row, rowIdx) => (
                             <tr key={rowIdx}>
                               {Object.values(row).map((val, valIdx) => (
-                                <td key={valIdx}>{val !== null && val !== undefined ? String(val) : ''}</td>
+                                <td key={valIdx}>
+                                  {val !== null && val !== undefined && val !== '' ? String(val) : (
+                                    <span style={{ color: '#cbd5e0', fontStyle: 'italic' }}>null</span>
+                                  )}
+                                </td>
                               ))}
                             </tr>
                           ))}
