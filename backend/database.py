@@ -103,29 +103,21 @@ class AnalysisDatabase:
         # Determine if dataset has any issues
         has_issues = 1  # Default to True
         try:
-            # Handle missing values - could be dict of counts or other structure
+            # Handle missing values
             missing_values = analysis_results.get('missing_values', {})
-            if isinstance(missing_values, dict):
-                missing_count = sum(v if isinstance(v, (int, float)) else 0 for v in missing_values.values())
-            else:
-                missing_count = 0
+            missing_count = missing_values.get('total_missing_values', 0) if isinstance(missing_values, dict) else 0
 
-            # Handle invalid values - dict of lists
+            # Handle invalid values
             invalid_values = analysis_results.get('invalid_values', {})
-            if isinstance(invalid_values, dict):
-                invalid_count = sum(len(v) if isinstance(v, list) else 0 for v in invalid_values.values())
-            else:
-                invalid_count = 0
+            invalid_count = invalid_values.get('total_invalid_count', 0) if isinstance(invalid_values, dict) else 0
 
             # Handle duplicates
             duplicates = analysis_results.get('duplicates', {})
-            duplicate_groups = duplicates.get('duplicate_groups', []) if isinstance(duplicates, dict) else []
-            duplicate_count = len(duplicate_groups) if isinstance(duplicate_groups, list) else 0
+            duplicate_count = duplicates.get('total_duplicates', 0) if isinstance(duplicates, dict) else 0
 
             # Handle logical issues
             logical_issues = analysis_results.get('logical_issues', {})
-            issues = logical_issues.get('issues', []) if isinstance(logical_issues, dict) else []
-            logical_count = len(issues) if isinstance(issues, list) else 0
+            logical_count = logical_issues.get('total_issues', 0) if isinstance(logical_issues, dict) else 0
 
             if missing_count == 0 and invalid_count == 0 and duplicate_count == 0 and logical_count == 0:
                 has_issues = 0
