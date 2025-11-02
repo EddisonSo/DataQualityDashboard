@@ -1,3 +1,15 @@
+"""
+Database module for storing and retrieving data quality analysis history.
+
+DEVELOPMENT MODE:
+    Set DEVELOPMENT = True to automatically drop and recreate all database tables
+    every time the backend server restarts. This is useful during development to
+    ensure a clean database state.
+
+    WARNING: All data will be lost on each restart when DEVELOPMENT = True!
+    Always set to False in production.
+"""
+
 import sqlite3
 import json
 import uuid
@@ -5,6 +17,12 @@ import hashlib
 from datetime import datetime
 from typing import List, Dict, Optional
 import os
+
+# ============================================================================
+# DEVELOPMENT MODE - Set to True to reset database on every backend restart
+# WARNING: This will DELETE ALL DATA when the server starts!
+# ============================================================================
+DEVELOPMENT = True
 
 
 class AnalysisDatabase:
@@ -16,10 +34,22 @@ class AnalysisDatabase:
         self.init_database()
 
     def init_database(self):
-        """Create the analyses table if it doesn't exist."""
+        """Create the analyses table if it doesn't exist. In development mode, drops all tables first."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
+        if DEVELOPMENT:
+            print("=" * 60)
+            print("🔧 DEVELOPMENT MODE: Resetting all database tables...")
+            print("=" * 60)
+
+            # Drop all tables
+            cursor.execute("DROP TABLE IF EXISTS analyses")
+            print("✓ Dropped 'analyses' table")
+
+            conn.commit()
+
+        # Create tables
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS analyses (
                 analysis_id TEXT PRIMARY KEY,
@@ -37,6 +67,13 @@ class AnalysisDatabase:
         cursor.execute('''
             CREATE INDEX IF NOT EXISTS idx_file_hash ON analyses(file_hash)
         ''')
+
+        if DEVELOPMENT:
+            print("✓ Created 'analyses' table")
+            print("✓ Created index on 'file_hash'")
+            print("=" * 60)
+            print("✅ Database reset complete!")
+            print("=" * 60)
 
         conn.commit()
         conn.close()
