@@ -1,10 +1,12 @@
 import React from 'react'
+import DataPreview from './DataPreview'
 
 function DatasetResults({ data }) {
   const {
     dataset_name,
     total_records,
     total_columns,
+    data_preview,
     missing_values,
     invalid_values,
     duplicates,
@@ -41,6 +43,8 @@ function DatasetResults({ data }) {
           </div>
         </div>
       </div>
+
+      <DataPreview dataPreview={data_preview} />
 
       <div className="summary-cards">
         <div className="summary-card">

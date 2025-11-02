@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import DatasetResults from './DatasetResults'
 
-function AnalysisHistory({ history, onRefresh, onDelete }) {
+function AnalysisHistory({ history, onRefresh, onDelete, onViewAnalysis }) {
   const [expandedId, setExpandedId] = useState(null)
-  const [viewMode, setViewMode] = useState('list') // 'list' or 'expanded'
 
   const formatTimestamp = (timestamp) => {
     const date = new Date(timestamp)
@@ -63,6 +62,17 @@ function AnalysisHistory({ history, onRefresh, onDelete }) {
                 </div>
               </div>
               <div className="history-item-actions">
+                {onViewAnalysis && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onViewAnalysis(item)
+                    }}
+                  >
+                    View Details
+                  </button>
+                )}
                 {onDelete && (
                   <button
                     className="btn btn-danger btn-sm"

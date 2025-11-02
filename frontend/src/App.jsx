@@ -14,6 +14,7 @@ function App() {
   const [history, setHistory] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('upload')
+  const [selectedAnalysis, setSelectedAnalysis] = useState(null)
 
   const handleFileChange = (e) => {
     setFiles(e.target.files)
@@ -73,6 +74,16 @@ function App() {
       console.error('Error deleting analysis:', err)
       alert('Failed to delete analysis')
     }
+  }
+
+  const handleViewAnalysis = (analysis) => {
+    setSelectedAnalysis(analysis)
+    setActiveTab('view-analysis')
+  }
+
+  const handleBackToHistory = () => {
+    setSelectedAnalysis(null)
+    setActiveTab('history')
   }
 
   // Fetch history on component mount
@@ -167,8 +178,39 @@ function App() {
                 history={history}
                 onRefresh={fetchHistory}
                 onDelete={handleDeleteHistory}
+                onViewAnalysis={handleViewAnalysis}
               />
             )}
+          </>
+        )}
+
+        {activeTab === 'view-analysis' && selectedAnalysis && (
+          <>
+            <div className="single-analysis-header">
+              <button
+                className="btn btn-secondary"
+                onClick={handleBackToHistory}
+              >
+                ← Back to History
+              </button>
+              <div className="analysis-meta">
+                <h2>{selectedAnalysis.dataset_name}</h2>
+                <p className="analysis-timestamp">
+                  Analyzed on {new Date(selectedAnalysis.analysis_timestamp).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                  })}
+                </p>
+                <p className="analysis-id-display">Analysis ID: {selectedAnalysis.analysis_id}</p>
+              </div>
+            </div>
+            <div className="results-container">
+              <DatasetResults data={selectedAnalysis.analysis_results} />
+            </div>
           </>
         )}
       </div>
