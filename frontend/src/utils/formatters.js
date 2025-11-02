@@ -4,6 +4,7 @@
 
 /**
  * Format timestamp to local time in a readable format
+ * Uses the user's locale and timezone automatically
  * @param {string} timestamp - ISO timestamp string
  * @param {boolean} includeSeconds - Whether to include seconds in the output
  * @returns {string} Formatted local time string
@@ -29,7 +30,8 @@ export const formatTimestamp = (timestamp, includeSeconds = false) => {
     options.second = '2-digit'
   }
 
-  return date.toLocaleString('en-US', options)
+  // Use user's locale by not specifying locale parameter
+  return date.toLocaleString(undefined, options)
 }
 
 /**
@@ -63,6 +65,7 @@ export const formatRelativeTime = (timestamp) => {
 
 /**
  * Format date only (no time)
+ * Uses the user's locale automatically
  * @param {string} timestamp - ISO timestamp string
  * @returns {string} Formatted date string
  */
@@ -71,7 +74,7 @@ export const formatDate = (timestamp) => {
 
   const date = new Date(timestamp)
 
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
@@ -80,6 +83,7 @@ export const formatDate = (timestamp) => {
 
 /**
  * Format time only (no date)
+ * Uses the user's locale automatically
  * @param {string} timestamp - ISO timestamp string
  * @returns {string} Formatted time string
  */
@@ -88,7 +92,7 @@ export const formatTime = (timestamp) => {
 
   const date = new Date(timestamp)
 
-  return date.toLocaleTimeString('en-US', {
+  return date.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',

@@ -94,7 +94,8 @@ class AnalysisDatabase:
         cursor = conn.cursor()
 
         analysis_id = str(uuid.uuid4())
-        timestamp = datetime.now().isoformat()
+        # Use UTC timestamp with timezone info for correct timezone handling
+        timestamp = datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
         results_json = json.dumps(analysis_results)
         total_records = analysis_results.get('total_records', 0)
         total_columns = analysis_results.get('total_columns', 0)
