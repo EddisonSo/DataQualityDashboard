@@ -1,12 +1,17 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import pandas as pd
 import io
 import hashlib
+import os
 from typing import List, Optional
+from dotenv import load_dotenv
 from data_analyzer import DataQualityAnalyzer
 from database import AnalysisDatabase
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI(
     title="Data Quality Dashboard API",
@@ -25,6 +30,21 @@ app.add_middleware(
 
 # Initialize database
 db = AnalysisDatabase()
+
+# API Key for authentication
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    raise ValueError("API_KEY environment variable is not set")
+
+
+def verify_api_key(x_api_key: str = Header(...)):
+    """Verify API key from request headers."""
+    if x_api_key != API_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key"
+        )
+    return x_api_key
 
 
 def compute_file_hash(content: bytes) -> str:
@@ -57,10 +77,14 @@ async def health_check():
 
 
 @app.post("/check-files")
-async def check_files(files: List[UploadFile] = File(...)):
+async def check_files(
+    files: List[UploadFile] = File(...),
+    api_key: str = Depends(verify_api_key)
+):
     """
     Check if uploaded files have been analyzed before.
     Returns information about previous analyses if found.
+    Requires valid API key in X-API-Key header.
     """
     try:
         file_checks = []
@@ -105,9 +129,13 @@ async def check_files(files: List[UploadFile] = File(...)):
 
 
 @app.post("/analyze")
-async def analyze_csv(files: List[UploadFile] = File(...)):
+async def analyze_csv(
+    files: List[UploadFile] = File(...),
+    api_key: str = Depends(verify_api_key)
+):
     """
     Analyze one or more CSV files for data quality issues.
+    Requires valid API key in X-API-Key header.
 
     Returns comprehensive analysis including:
     - Missing values

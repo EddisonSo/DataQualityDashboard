@@ -7,7 +7,7 @@ import DuplicateFileModal from './components/DuplicateFileModal'
 import DeleteConfirmModal from './components/DeleteConfirmModal'
 import { formatTimestamp, formatRelativeTime } from './utils/formatters'
 
-const API_URL = 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 function App() {
   const [files, setFiles] = useState(null)
@@ -22,6 +22,8 @@ function App() {
   const [duplicateFiles, setDuplicateFiles] = useState([])
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [analysisToDelete, setAnalysisToDelete] = useState(null)
+  const [apiKey, setApiKey] = useState(localStorage.getItem('apiKey') || '')
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false)
   const fileInputRef = useRef(null)
 
   const handleFileChange = (e) => {
@@ -29,9 +31,26 @@ function App() {
     setError(null)
   }
 
+  const handleApiKeyChange = (e) => {
+    const newKey = e.target.value
+    setApiKey(newKey)
+    localStorage.setItem('apiKey', newKey)
+  }
+
+  const handleClearApiKey = () => {
+    setApiKey('')
+    localStorage.removeItem('apiKey')
+  }
+
   const handleAnalyze = async (forceReanalyze = false) => {
     if (!files || files.length === 0) {
       setError('Please select at least one CSV file')
+      return
+    }
+
+    if (!apiKey) {
+      setError('Please enter your API key')
+      setShowApiKeyInput(true)
       return
     }
 
@@ -49,7 +68,8 @@ function App() {
 
         const checkResponse = await axios.post(`${API_URL}/check-files`, checkFormData, {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type': 'multipart/form-data',
+            'X-API-Key': apiKey
           }
         })
 
@@ -74,7 +94,8 @@ function App() {
 
       const response = await axios.post(`${API_URL}/analyze`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'X-API-Key': apiKey
         }
       })
 
@@ -82,7 +103,12 @@ function App() {
       // Refresh history after new analysis
       fetchHistory()
     } catch (err) {
-      setError(err.response?.data?.detail || 'An error occurred while analyzing the files')
+      if (err.response?.status === 401) {
+        setError('Invalid API key. Please check your API key and try again.')
+        setShowApiKeyInput(true)
+      } else {
+        setError(err.response?.data?.detail || 'An error occurred while analyzing the files')
+      }
     } finally {
       setLoading(false)
     }
@@ -179,8 +205,47 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>Data Quality Dashboard</h1>
-        <p>Comprehensive data quality analysis for CSV files</p>
+        <div className="header-content">
+          <div className="header-text">
+            <h1>Data Quality Dashboard</h1>
+            <p>Comprehensive data quality analysis for CSV files</p>
+          </div>
+          <div className="api-key-section">
+            {!showApiKeyInput && (
+              <button
+                className="btn btn-api-key"
+                onClick={() => setShowApiKeyInput(true)}
+              >
+                {apiKey ? '🔑 API Key Set' : '🔓 Set API Key'}
+              </button>
+            )}
+            {showApiKeyInput && (
+              <div className="api-key-input-container">
+                <input
+                  type="password"
+                  className="api-key-input"
+                  placeholder="Enter API Key"
+                  value={apiKey}
+                  onChange={handleApiKeyChange}
+                />
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowApiKeyInput(false)}
+                >
+                  Done
+                </button>
+                {apiKey && (
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={handleClearApiKey}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </header>
 
       <div className="container">

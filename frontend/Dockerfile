@@ -13,10 +13,10 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci --silent
 
-# Copy source code
+# Copy source code and .env file
 COPY . .
 
-# Build the application
+# Build the application (Vite will read .env file automatically)
 RUN npm run build
 
 # Stage 2: Serve with nginx
