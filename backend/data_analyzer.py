@@ -286,46 +286,84 @@ class DataQualityAnalyzer:
         }
 
     def analyze_duplicates(self) -> Dict[str, Any]:
-        """Analyze duplicate records."""
+        """
+        Analyze duplicate records.
+
+        Only considers rows as duplicates if ALL non-primary-key columns have identical content.
+        Only the primary key column is excluded (e.g., 'transaction_id', 'customer_id', 'id').
+        Foreign keys (like 'customer_id' in transactions) are INCLUDED in the comparison.
+        """
         duplicate_info = []
 
-        # Check for duplicate rows (excluding ID columns)
-        id_columns = [col for col in self.df.columns if 'id' in col.lower()]
-        non_id_columns = [col for col in self.df.columns if col not in id_columns]
+        # Identify PRIMARY KEY columns to exclude (not foreign keys)
+        # Primary key is typically: 'id', 'ID', or '{dataset_name}_id'
+        dataset_base_name = self.dataset_name.replace('.csv', '').lower().split('/')[-1]
 
-        if non_id_columns:
-            duplicates = self.df.duplicated(subset=non_id_columns, keep=False)
-            duplicate_count = duplicates.sum()
+        primary_key_columns = []
+        for col in self.df.columns:
+            col_lower = col.lower()
+            # Exact match for 'id'
+            if col_lower == 'id':
+                primary_key_columns.append(col)
+            # Match for '{dataset_name}_id' pattern (e.g., 'transaction_id' for 'transactions.csv')
+            elif col_lower == f"{dataset_base_name.rstrip('s')}_id":  # Handle plural dataset names
+                primary_key_columns.append(col)
+            elif col_lower == f"{dataset_base_name}_id":
+                primary_key_columns.append(col)
 
-            if duplicate_count > 0:
-                # Group duplicate rows together
-                duplicate_groups = []
-                df_duplicates = self.df[duplicates]
+        # All other columns (including foreign keys like customer_id in transactions)
+        non_primary_key_columns = [col for col in self.df.columns if col not in primary_key_columns]
 
-                # Create groups of duplicate records
-                seen_groups = set()
-                for idx, row in df_duplicates.iterrows():
-                    # Create a hashable key from non-ID columns
-                    key_values = tuple(str(row[col]) for col in non_id_columns)
+        if not non_primary_key_columns:
+            # If all columns are primary keys, no duplicates to check
+            return {
+                "duplicate_patterns": [],
+                "total_duplicates": 0
+            }
 
-                    if key_values not in seen_groups:
-                        seen_groups.add(key_values)
-                        # Find all rows with the same non-ID values
-                        mask = pd.Series([True] * len(df_duplicates), index=df_duplicates.index)
-                        for col in non_id_columns:
-                            mask &= (df_duplicates[col] == row[col]) | (df_duplicates[col].isna() & pd.isna(row[col]))
+        # Create a temporary dataframe with only non-primary-key columns for comparison
+        df_for_comparison = self.df[non_primary_key_columns].copy()
 
-                        group_rows = self._clean_for_json(df_duplicates[mask])
-                        if len(group_rows) > 1:  # Only include if there are actual duplicates
-                            duplicate_groups.append(group_rows)
+        # Find duplicates based on ALL non-primary-key columns being identical
+        # keep=False marks all duplicates (not just the first/last occurrence)
+        duplicates_mask = df_for_comparison.duplicated(keep=False)
+        duplicate_count = duplicates_mask.sum()
 
-                duplicate_info.append({
-                    "type": "Full Record Duplicates",
-                    "count": int(duplicate_count),
-                    "percentage": round((duplicate_count / self.total_records) * 100, 2),
-                    "description": "Records with identical data but different IDs",
-                    "duplicate_groups": duplicate_groups
-                })
+        if duplicate_count > 0:
+            # Group duplicate rows together
+            duplicate_groups = []
+            df_with_duplicates = self.df[duplicates_mask].copy()
+            df_comparison_duplicates = df_for_comparison[duplicates_mask].copy()
+
+            # Add a temporary group identifier
+            # Rows with identical non-primary-key values will get the same group number
+            df_comparison_duplicates['_temp_group'] = df_comparison_duplicates.groupby(
+                non_primary_key_columns, dropna=False
+            ).ngroup()
+
+            # Get unique groups
+            unique_groups = df_comparison_duplicates['_temp_group'].unique()
+
+            for group_id in unique_groups:
+                # Get all rows in this duplicate group
+                group_indices = df_comparison_duplicates[
+                    df_comparison_duplicates['_temp_group'] == group_id
+                ].index
+
+                # Get the full rows (including primary key columns) for this group
+                group_rows = self.df.loc[group_indices]
+
+                # Only include groups with 2 or more rows
+                if len(group_rows) > 1:
+                    duplicate_groups.append(self._clean_for_json(group_rows))
+
+            duplicate_info.append({
+                "type": "Full Record Duplicates",
+                "count": int(duplicate_count),
+                "percentage": round((duplicate_count / self.total_records) * 100, 2),
+                "description": f"Records with identical content in all {len(non_primary_key_columns)} columns (excluding primary key)",
+                "duplicate_groups": duplicate_groups
+            })
 
         return {
             "duplicate_patterns": duplicate_info,
