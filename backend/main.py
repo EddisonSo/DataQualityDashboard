@@ -3,8 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import pandas as pd
 import io
-from typing import List
+from typing import List, Optional
 from data_analyzer import DataQualityAnalyzer
+from database import AnalysisDatabase
 
 app = FastAPI(
     title="Data Quality Dashboard API",
@@ -21,6 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize database
+db = AnalysisDatabase()
+
 
 @app.get("/")
 async def root():
@@ -30,6 +34,10 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "/analyze": "POST - Analyze CSV files",
+            "/history": "GET - Get all analysis history",
+            "/history/{analysis_id}": "GET - Get specific analysis by ID",
+            "/history/dataset/{dataset_name}": "GET - Get analyses for a dataset",
+            "/stats": "GET - Get summary statistics",
             "/health": "GET - Health check"
         }
     }
@@ -72,6 +80,10 @@ async def analyze_csv(files: List[UploadFile] = File(...)):
             analyzer = DataQualityAnalyzer(df, file.filename)
             analysis = analyzer.analyze()
 
+            # Save analysis to database
+            analysis_id = db.save_analysis(file.filename, analysis)
+            analysis['analysis_id'] = analysis_id
+
             results.append(analysis)
 
         return JSONResponse(content={
@@ -109,6 +121,10 @@ async def analyze_single_csv(file: UploadFile = File(...)):
         analyzer = DataQualityAnalyzer(df, file.filename)
         analysis = analyzer.analyze()
 
+        # Save analysis to database
+        analysis_id = db.save_analysis(file.filename, analysis)
+        analysis['analysis_id'] = analysis_id
+
         return JSONResponse(content={
             "success": True,
             "result": analysis
@@ -120,6 +136,106 @@ async def analyze_single_csv(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Error parsing CSV file")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
+
+@app.get("/history")
+async def get_analysis_history(limit: Optional[int] = None):
+    """
+    Get all analysis history, ordered by most recent first.
+
+    Args:
+        limit: Optional limit on number of results to return
+    """
+    try:
+        analyses = db.get_all_analyses(limit=limit)
+        return JSONResponse(content={
+            "success": True,
+            "count": len(analyses),
+            "analyses": analyses
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving history: {str(e)}")
+
+
+@app.get("/history/{analysis_id}")
+async def get_analysis_by_id(analysis_id: str):
+    """
+    Get a specific analysis by its ID.
+
+    Args:
+        analysis_id: The ID of the analysis to retrieve
+    """
+    try:
+        analysis = db.get_analysis_by_id(analysis_id)
+        if analysis is None:
+            raise HTTPException(status_code=404, detail=f"Analysis with ID {analysis_id} not found")
+
+        return JSONResponse(content={
+            "success": True,
+            "analysis": analysis
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving analysis: {str(e)}")
+
+
+@app.get("/history/dataset/{dataset_name}")
+async def get_analyses_by_dataset(dataset_name: str):
+    """
+    Get all analyses for a specific dataset.
+
+    Args:
+        dataset_name: Name of the dataset to filter by
+    """
+    try:
+        analyses = db.get_analyses_by_dataset(dataset_name)
+        return JSONResponse(content={
+            "success": True,
+            "dataset_name": dataset_name,
+            "count": len(analyses),
+            "analyses": analyses
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving analyses: {str(e)}")
+
+
+@app.delete("/history/{analysis_id}")
+async def delete_analysis(analysis_id: str):
+    """
+    Delete a specific analysis.
+
+    Args:
+        analysis_id: The ID of the analysis to delete
+    """
+    try:
+        deleted = db.delete_analysis(analysis_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"Analysis with ID {analysis_id} not found")
+
+        return JSONResponse(content={
+            "success": True,
+            "message": f"Analysis {analysis_id} deleted successfully"
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting analysis: {str(e)}")
+
+
+@app.get("/stats")
+async def get_summary_stats():
+    """
+    Get summary statistics about all analyses in the database.
+    """
+    try:
+        stats = db.get_summary_stats()
+        return JSONResponse(content={
+            "success": True,
+            "stats": stats
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving stats: {str(e)}")
 
 
 if __name__ == "__main__":

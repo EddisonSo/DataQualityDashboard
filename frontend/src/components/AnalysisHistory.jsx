@@ -1,0 +1,97 @@
+import { useState } from 'react'
+import DatasetResults from './DatasetResults'
+
+function AnalysisHistory({ history, onRefresh, onDelete }) {
+  const [expandedId, setExpandedId] = useState(null)
+  const [viewMode, setViewMode] = useState('list') // 'list' or 'expanded'
+
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp)
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  }
+
+  const toggleExpand = (analysisId) => {
+    setExpandedId(expandedId === analysisId ? null : analysisId)
+  }
+
+  if (!history || history.length === 0) {
+    return (
+      <div className="history-empty">
+        <p>No analysis history yet. Upload and analyze CSV files to see history here.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="history-section">
+      <div className="history-header">
+        <h2>Analysis History ({history.length})</h2>
+        <button className="btn btn-secondary" onClick={onRefresh}>
+          Refresh
+        </button>
+      </div>
+
+      <div className="history-list">
+        {history.map((item) => (
+          <div key={item.analysis_id} className="history-item">
+            <div className="history-item-header" onClick={() => toggleExpand(item.analysis_id)}>
+              <div className="history-item-info">
+                <div className="history-item-title">
+                  <span className="dataset-name">{item.dataset_name}</span>
+                  {item.has_issues && (
+                    <span className="badge badge-warning">Has Issues</span>
+                  )}
+                  {!item.has_issues && (
+                    <span className="badge badge-success">Clean</span>
+                  )}
+                </div>
+                <div className="history-item-meta">
+                  <span className="timestamp">{formatTimestamp(item.analysis_timestamp)}</span>
+                  <span className="meta-divider">•</span>
+                  <span>{item.total_records} records</span>
+                  <span className="meta-divider">•</span>
+                  <span>{item.total_columns} columns</span>
+                  <span className="meta-divider">•</span>
+                  <span className="analysis-id">ID: {item.analysis_id}</span>
+                </div>
+              </div>
+              <div className="history-item-actions">
+                {onDelete && (
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (window.confirm('Are you sure you want to delete this analysis?')) {
+                        onDelete(item.analysis_id)
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
+                <span className="expand-icon">
+                  {expandedId === item.analysis_id ? '▼' : '▶'}
+                </span>
+              </div>
+            </div>
+
+            {expandedId === item.analysis_id && (
+              <div className="history-item-expanded">
+                <DatasetResults data={item.analysis_results} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default AnalysisHistory
