@@ -1,20 +1,9 @@
 import { useState } from 'react'
 import DatasetResults from './DatasetResults'
+import { formatTimestamp, formatRelativeTime } from '../utils/formatters'
 
 function AnalysisHistory({ history, onRefresh, onDelete, onViewAnalysis }) {
   const [expandedId, setExpandedId] = useState(null)
-
-  const formatTimestamp = (timestamp) => {
-    const date = new Date(timestamp)
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  }
 
   const toggleExpand = (analysisId) => {
     setExpandedId(expandedId === analysisId ? null : analysisId)
@@ -52,9 +41,11 @@ function AnalysisHistory({ history, onRefresh, onDelete, onViewAnalysis }) {
                   )}
                 </div>
                 <div className="history-item-meta">
-                  <span className="timestamp">{formatTimestamp(item.analysis_timestamp)}</span>
+                  <span className="timestamp" title={formatTimestamp(item.analysis_timestamp, true)}>
+                    {formatRelativeTime(item.analysis_timestamp)}
+                  </span>
                   <span className="meta-divider">•</span>
-                  <span>{item.total_records} records</span>
+                  <span>{item.total_records.toLocaleString()} records</span>
                   <span className="meta-divider">•</span>
                   <span>{item.total_columns} columns</span>
                   <span className="meta-divider">•</span>

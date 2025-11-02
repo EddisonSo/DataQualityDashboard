@@ -4,6 +4,7 @@ import './App.css'
 import DatasetResults from './components/DatasetResults'
 import AnalysisHistory from './components/AnalysisHistory'
 import DuplicateFileModal from './components/DuplicateFileModal'
+import { formatTimestamp, formatRelativeTime } from './utils/formatters'
 
 const API_URL = 'http://localhost:8000'
 
@@ -260,14 +261,14 @@ function App() {
               <div className="analysis-meta">
                 <h2>{selectedAnalysis.dataset_name}</h2>
                 <p className="analysis-timestamp">
-                  Analyzed on {new Date(selectedAnalysis.analysis_timestamp).toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                  })}
+                  <span className="timestamp-label">Analyzed:</span>{' '}
+                  <span title={formatTimestamp(selectedAnalysis.analysis_timestamp, true)}>
+                    {formatRelativeTime(selectedAnalysis.analysis_timestamp)}
+                  </span>
+                  {' '}
+                  <span className="timestamp-full">
+                    ({formatTimestamp(selectedAnalysis.analysis_timestamp)})
+                  </span>
                 </p>
                 <p className="analysis-id-display">Analysis ID: {selectedAnalysis.analysis_id}</p>
               </div>

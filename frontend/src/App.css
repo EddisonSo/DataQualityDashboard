@@ -584,6 +584,23 @@ input[type="file"]:hover {
   font-weight: 500;
 }
 
+.analysis-timestamp .timestamp-label {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.analysis-timestamp .timestamp-full {
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.timestamp {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-decoration-color: #cbd5e0;
+  text-underline-offset: 3px;
+}
+
 .analysis-id-display {
   color: #718096;
   font-size: 0.875rem;

@@ -1,16 +1,7 @@
+import { formatTimestamp, formatRelativeTime } from '../utils/formatters'
+
 function DuplicateFileModal({ files, onReanalyze, onViewPrevious, onCancel }) {
   if (!files || files.length === 0) return null
-
-  const formatTimestamp = (timestamp) => {
-    const date = new Date(timestamp)
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
@@ -33,8 +24,11 @@ function DuplicateFileModal({ files, onReanalyze, onViewPrevious, onCancel }) {
                 <div className="file-info">
                   <div className="file-name">{file.filename}</div>
                   <div className="file-meta">
-                    <span className="meta-item">
-                      <strong>Analyzed:</strong> {formatTimestamp(file.previous_analysis.analysis_timestamp)}
+                    <span
+                      className="meta-item"
+                      title={formatTimestamp(file.previous_analysis.analysis_timestamp, true)}
+                    >
+                      <strong>Analyzed:</strong> {formatRelativeTime(file.previous_analysis.analysis_timestamp)}
                     </span>
                     <span className="meta-divider">•</span>
                     <span className="meta-item">
