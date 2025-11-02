@@ -26,6 +26,12 @@ class DataQualityAnalyzer:
                     record[key] = None
         return records
 
+    def _safe_percentage(self, count: int, total: int) -> float:
+        """Safely calculate percentage, avoiding division by zero."""
+        if total == 0:
+            return 0.0
+        return round((count / total) * 100, 2)
+
     def analyze(self) -> Dict[str, Any]:
         """Perform comprehensive data quality analysis."""
         return {
@@ -56,11 +62,10 @@ class DataQualityAnalyzer:
         for column in self.df.columns:
             missing_count = self.df[column].isna().sum()
             if missing_count > 0:
-                missing_percentage = (missing_count / self.total_records) * 100
                 missing_data.append({
                     "column": column,
                     "missing_count": int(missing_count),
-                    "missing_percentage": round(missing_percentage, 2)
+                    "missing_percentage": self._safe_percentage(missing_count, self.total_records)
                 })
 
         total_missing = self.df.isna().sum().sum()
@@ -69,7 +74,7 @@ class DataQualityAnalyzer:
         return {
             "columns_with_missing": missing_data,
             "total_missing_values": int(total_missing),
-            "overall_missing_percentage": round((total_missing / total_cells) * 100, 2)
+            "overall_missing_percentage": self._safe_percentage(total_missing, total_cells)
         }
 
     def analyze_invalid_values(self) -> Dict[str, Any]:
@@ -141,7 +146,7 @@ class DataQualityAnalyzer:
             "column": "email",
             "issue_type": "Invalid Format",
             "count": int(invalid_count),
-            "percentage": round((invalid_count / self.total_records) * 100, 2),
+            "percentage": self._safe_percentage(invalid_count, self.total_records),
             "description": "Email addresses missing @ symbol or domain",
             "examples": non_null_emails[invalid].head(3).tolist() if invalid_count > 0 else [],
             "invalid_rows": invalid_rows
@@ -163,7 +168,7 @@ class DataQualityAnalyzer:
             "column": "age",
             "issue_type": "Invalid Range",
             "count": int(invalid_count),
-            "percentage": round((invalid_count / self.total_records) * 100, 2),
+            "percentage": self._safe_percentage(invalid_count, self.total_records),
             "description": "Age values that are negative or unrealistically high (>120)",
             "examples": non_null_ages[invalid].head(3).tolist() if invalid_count > 0 else [],
             "invalid_rows": invalid_rows
@@ -186,7 +191,7 @@ class DataQualityAnalyzer:
                 "column": column,
                 "issue_type": "Future Date",
                 "count": int(invalid_count),
-                "percentage": round((invalid_count / self.total_records) * 100, 2),
+                "percentage": self._safe_percentage(invalid_count, self.total_records),
                 "description": f"Future dates in {column} (data entry errors)",
                 "examples": self.df.loc[future_dates, column].head(3).tolist() if invalid_count > 0 else [],
                 "invalid_rows": invalid_rows
@@ -220,7 +225,7 @@ class DataQualityAnalyzer:
             "column": "status",
             "issue_type": "Invalid Value",
             "count": int(invalid_count),
-            "percentage": round((invalid_count / self.total_records) * 100, 2),
+            "percentage": self._safe_percentage(invalid_count, self.total_records),
             "description": description,
             "examples": non_null_status[invalid].unique().tolist() if invalid_count > 0 else [],
             "invalid_rows": invalid_rows
@@ -243,7 +248,7 @@ class DataQualityAnalyzer:
             "column": "payment_method",
             "issue_type": "Invalid Value",
             "count": int(invalid_count),
-            "percentage": round((invalid_count / self.total_records) * 100, 2),
+            "percentage": self._safe_percentage(invalid_count, self.total_records),
             "description": "Payment methods that are not valid options",
             "examples": non_null_payment[invalid].unique().tolist() if invalid_count > 0 else [],
             "invalid_rows": invalid_rows
@@ -266,7 +271,7 @@ class DataQualityAnalyzer:
             "column": "unit_price",
             "issue_type": "Pricing Error",
             "count": int(invalid_count),
-            "percentage": round((invalid_count / self.total_records) * 100, 2),
+            "percentage": self._safe_percentage(invalid_count, self.total_records),
             "description": "Unit prices that are negative or unrealistically high",
             "examples": prices[invalid].head(3).tolist() if invalid_count > 0 else [],
             "invalid_rows": invalid_rows
@@ -288,7 +293,7 @@ class DataQualityAnalyzer:
             "column": "total_amount",
             "issue_type": "Negative Amount",
             "count": int(invalid_count),
-            "percentage": round((invalid_count / self.total_records) * 100, 2),
+            "percentage": self._safe_percentage(invalid_count, self.total_records),
             "description": "Negative transaction amounts (returns or errors)",
             "examples": amounts[invalid].head(3).tolist() if invalid_count > 0 else [],
             "invalid_rows": invalid_rows
@@ -369,7 +374,7 @@ class DataQualityAnalyzer:
             duplicate_info.append({
                 "type": "Full Record Duplicates",
                 "count": int(duplicate_count),
-                "percentage": round((duplicate_count / self.total_records) * 100, 2),
+                "percentage": self._safe_percentage(duplicate_count, self.total_records),
                 "description": f"Records with identical content in all {len(non_primary_key_columns)} columns (excluding primary key)",
                 "duplicate_groups": duplicate_groups
             })
@@ -394,7 +399,7 @@ class DataQualityAnalyzer:
                 logical_issues.append({
                     "type": "Selling Price Below Cost",
                     "count": int(issue_count),
-                    "percentage": round((issue_count / self.total_records) * 100, 2),
+                    "percentage": self._safe_percentage(issue_count, self.total_records),
                     "description": "Products where selling price is less than cost price",
                     "severity": "high",
                     "issue_rows": issue_rows
@@ -411,7 +416,7 @@ class DataQualityAnalyzer:
                 logical_issues.append({
                     "type": "Stock Below Reorder Level",
                     "count": int(issue_count),
-                    "percentage": round((issue_count / self.total_records) * 100, 2),
+                    "percentage": self._safe_percentage(issue_count, self.total_records),
                     "description": "Products with stock levels below reorder threshold",
                     "severity": "medium",
                     "issue_rows": issue_rows
@@ -428,12 +433,18 @@ class DataQualityAnalyzer:
         numeric_columns = self.df.select_dtypes(include=[np.number]).columns
 
         for col in numeric_columns:
+            # Helper function to safely round values, handling NaN and inf
+            def safe_round(value):
+                if value is None or np.isnan(value) or np.isinf(value):
+                    return None
+                return round(float(value), 2)
+
             stats[col] = {
-                "mean": round(float(self.df[col].mean()), 2) if not self.df[col].isna().all() else None,
-                "median": round(float(self.df[col].median()), 2) if not self.df[col].isna().all() else None,
-                "min": round(float(self.df[col].min()), 2) if not self.df[col].isna().all() else None,
-                "max": round(float(self.df[col].max()), 2) if not self.df[col].isna().all() else None,
-                "std": round(float(self.df[col].std()), 2) if not self.df[col].isna().all() else None
+                "mean": safe_round(self.df[col].mean()) if not self.df[col].isna().all() else None,
+                "median": safe_round(self.df[col].median()) if not self.df[col].isna().all() else None,
+                "min": safe_round(self.df[col].min()) if not self.df[col].isna().all() else None,
+                "max": safe_round(self.df[col].max()) if not self.df[col].isna().all() else None,
+                "std": safe_round(self.df[col].std()) if not self.df[col].isna().all() else None
             }
 
         return stats
@@ -473,7 +484,7 @@ class DataQualityAnalyzer:
                 "data_type": self._simplify_data_type(col, self.df[col].dtype),
                 "non_null_count": int(non_null_count),
                 "null_count": int(null_count),
-                "null_percentage": round((null_count / self.total_records) * 100, 2),
+                "null_percentage": self._safe_percentage(null_count, self.total_records),
                 "unique_values": int(self.df[col].nunique())
             }
 

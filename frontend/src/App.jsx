@@ -4,6 +4,7 @@ import './App.css'
 import DatasetResults from './components/DatasetResults'
 import AnalysisHistory from './components/AnalysisHistory'
 import DuplicateFileModal from './components/DuplicateFileModal'
+import DeleteConfirmModal from './components/DeleteConfirmModal'
 import { formatTimestamp, formatRelativeTime } from './utils/formatters'
 
 const API_URL = 'http://localhost:8000'
@@ -19,6 +20,8 @@ function App() {
   const [selectedAnalysis, setSelectedAnalysis] = useState(null)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [duplicateFiles, setDuplicateFiles] = useState([])
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [analysisToDelete, setAnalysisToDelete] = useState(null)
   const fileInputRef = useRef(null)
 
   const handleFileChange = (e) => {
@@ -97,15 +100,31 @@ function App() {
     }
   }
 
-  const handleDeleteHistory = async (analysisId) => {
+  const handleDeleteClick = (analysis) => {
+    setAnalysisToDelete(analysis)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!analysisToDelete) return
+
     try {
-      await axios.delete(`${API_URL}/history/${analysisId}`)
+      await axios.delete(`${API_URL}/history/${analysisToDelete.analysis_id}`)
+      setShowDeleteModal(false)
+      setAnalysisToDelete(null)
       // Refresh history after deletion
       fetchHistory()
     } catch (err) {
       console.error('Error deleting analysis:', err)
-      alert('Failed to delete analysis')
+      setError('Failed to delete analysis')
+      setShowDeleteModal(false)
+      setAnalysisToDelete(null)
     }
+  }
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false)
+    setAnalysisToDelete(null)
   }
 
   const handleViewAnalysis = (analysis) => {
@@ -250,7 +269,7 @@ function App() {
               <AnalysisHistory
                 history={history}
                 onRefresh={fetchHistory}
-                onDelete={handleDeleteHistory}
+                onDelete={handleDeleteClick}
                 onViewAnalysis={handleViewAnalysis}
               />
             )}
@@ -294,6 +313,14 @@ function App() {
           onReanalyze={handleReanalyze}
           onViewPrevious={handleViewPrevious}
           onCancel={handleCancelDuplicateModal}
+        />
+      )}
+
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          analysis={analysisToDelete}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
         />
       )}
     </div>

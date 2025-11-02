@@ -69,9 +69,7 @@ function AnalysisHistory({ history, onRefresh, onDelete, onViewAnalysis }) {
                     className="btn btn-danger btn-sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      if (window.confirm('Are you sure you want to delete this analysis?')) {
-                        onDelete(item.analysis_id)
-                      }
+                      onDelete(item)
                     }}
                   >
                     Delete

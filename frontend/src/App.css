@@ -855,6 +855,10 @@ input[type="file"]:hover {
   color: white;
 }
 
+.modal-header-danger {
+  background: linear-gradient(135deg, #fc466b 0%, #c33 100%);
+}
+
 .modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
@@ -969,4 +973,52 @@ input[type="file"]:hover {
 .btn-reanalyze:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+}
+
+/* Delete Confirmation Modal Styles */
+.delete-confirm-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: #fff5f5;
+  border: 2px solid #feb2b2;
+  border-radius: 12px;
+  margin-top: 1rem;
+}
+
+.delete-confirm-item .file-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.delete-confirm-item .file-info {
+  flex: 1;
+}
+
+.delete-confirm-item .file-name {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+.delete-confirm-item .file-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  color: #718096;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.analysis-id-small {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #a0aec0;
+  background: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
 }
