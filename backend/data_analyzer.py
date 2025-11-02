@@ -32,12 +32,21 @@ class DataQualityAnalyzer:
             "dataset_name": self.dataset_name,
             "total_records": self.total_records,
             "total_columns": len(self.df.columns),
+            "data_preview": self.get_data_preview(),
             "missing_values": self.analyze_missing_values(),
             "invalid_values": self.analyze_invalid_values(),
             "duplicates": self.analyze_duplicates(),
             "logical_issues": self.analyze_logical_issues(),
             "statistics": self.generate_statistics(),
             "column_details": self.analyze_columns()
+        }
+
+    def get_data_preview(self) -> Dict[str, Any]:
+        """Get a preview of the raw data for display."""
+        return {
+            "columns": self.df.columns.tolist(),
+            "data": self._clean_for_json(self.df),
+            "total_rows": len(self.df)
         }
 
     def analyze_missing_values(self) -> Dict[str, Any]:
