@@ -74,6 +74,29 @@ input[type="file"]:hover {
   transition: all 0.2s;
 }
 
+.btn-browse {
+  background: white;
+  color: #2f80ed;
+  border: 2px solid #56ccf2;
+}
+
+.btn-browse:hover:not(:disabled) {
+  background: linear-gradient(135deg, #56ccf2 0%, #2f80ed 100%);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(86, 204, 242, 0.3);
+}
+
+.files-selected {
+  color: #4a5568;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.95rem;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, #56ccf2 0%, #2f80ed 100%);
   color: white;

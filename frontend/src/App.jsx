@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import './App.css'
 import DatasetResults from './components/DatasetResults'
@@ -19,6 +19,7 @@ function App() {
   const [selectedAnalysis, setSelectedAnalysis] = useState(null)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [duplicateFiles, setDuplicateFiles] = useState([])
+  const fileInputRef = useRef(null)
 
   const handleFileChange = (e) => {
     setFiles(e.target.files)
@@ -184,14 +185,26 @@ function App() {
             <div className="upload-section">
               <h2>Upload CSV Files</h2>
               <div className="file-input-wrapper">
-                <div className="file-input">
-                  <input
-                    type="file"
-                    accept=".csv"
-                    multiple
-                    onChange={handleFileChange}
-                  />
-                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  multiple
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  className="btn btn-browse"
+                  onClick={() => fileInputRef.current?.click()}
+                  type="button"
+                >
+                  Browse Files
+                </button>
+                {files && files.length > 0 && (
+                  <span className="files-selected">
+                    {files.length} file{files.length > 1 ? 's' : ''} selected
+                  </span>
+                )}
                 <button
                   className="btn btn-primary"
                   onClick={() => handleAnalyze()}
@@ -200,11 +213,6 @@ function App() {
                   {loading ? 'Analyzing...' : 'Analyze Data Quality'}
                 </button>
               </div>
-              {files && files.length > 0 && (
-                <p style={{ marginTop: '1rem', color: '#718096' }}>
-                  Selected {files.length} file{files.length > 1 ? 's' : ''}
-                </p>
-              )}
             </div>
 
             {error && (
