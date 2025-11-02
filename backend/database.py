@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import uuid
+import hashlib
 from datetime import datetime
 from typing import List, Dict, Optional
 import os
@@ -23,6 +24,7 @@ class AnalysisDatabase:
             CREATE TABLE IF NOT EXISTS analyses (
                 analysis_id TEXT PRIMARY KEY,
                 dataset_name TEXT NOT NULL,
+                file_hash TEXT NOT NULL,
                 analysis_timestamp TEXT NOT NULL,
                 analysis_results TEXT NOT NULL,
                 total_records INTEGER,
@@ -31,15 +33,21 @@ class AnalysisDatabase:
             )
         ''')
 
+        # Create index on file_hash for faster lookups
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_file_hash ON analyses(file_hash)
+        ''')
+
         conn.commit()
         conn.close()
 
-    def save_analysis(self, dataset_name: str, analysis_results: Dict) -> str:
+    def save_analysis(self, dataset_name: str, file_hash: str, analysis_results: Dict) -> str:
         """
         Save an analysis to the database.
 
         Args:
             dataset_name: Name of the dataset/file analyzed
+            file_hash: SHA-256 hash of the file content
             analysis_results: Complete analysis results dictionary
 
         Returns:
@@ -89,14 +97,53 @@ class AnalysisDatabase:
 
         cursor.execute('''
             INSERT INTO analyses
-            (analysis_id, dataset_name, analysis_timestamp, analysis_results, total_records, total_columns, has_issues)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (analysis_id, dataset_name, timestamp, results_json, total_records, total_columns, has_issues))
+            (analysis_id, dataset_name, file_hash, analysis_timestamp, analysis_results, total_records, total_columns, has_issues)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (analysis_id, dataset_name, file_hash, timestamp, results_json, total_records, total_columns, has_issues))
 
         conn.commit()
         conn.close()
 
         return analysis_id
+
+    def get_analysis_by_hash(self, file_hash: str) -> Optional[Dict]:
+        """
+        Check if a file with this hash has been analyzed before.
+
+        Args:
+            file_hash: SHA-256 hash of the file content
+
+        Returns:
+            The most recent analysis for this file hash, or None if not found
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT analysis_id, dataset_name, file_hash, analysis_timestamp,
+                   analysis_results, total_records, total_columns, has_issues
+            FROM analyses
+            WHERE file_hash = ?
+            ORDER BY analysis_timestamp DESC
+            LIMIT 1
+        ''', (file_hash,))
+
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            return {
+                'analysis_id': row[0],
+                'dataset_name': row[1],
+                'file_hash': row[2],
+                'analysis_timestamp': row[3],
+                'analysis_results': json.loads(row[4]),
+                'total_records': row[5],
+                'total_columns': row[6],
+                'has_issues': bool(row[7])
+            }
+
+        return None
 
     def get_all_analyses(self, limit: Optional[int] = None) -> List[Dict]:
         """
@@ -112,7 +159,7 @@ class AnalysisDatabase:
         cursor = conn.cursor()
 
         query = '''
-            SELECT analysis_id, dataset_name, analysis_timestamp,
+            SELECT analysis_id, dataset_name, file_hash, analysis_timestamp,
                    analysis_results, total_records, total_columns, has_issues
             FROM analyses
             ORDER BY analysis_timestamp DESC
@@ -130,11 +177,12 @@ class AnalysisDatabase:
             analyses.append({
                 'analysis_id': row[0],
                 'dataset_name': row[1],
-                'analysis_timestamp': row[2],
-                'analysis_results': json.loads(row[3]),
-                'total_records': row[4],
-                'total_columns': row[5],
-                'has_issues': bool(row[6])
+                'file_hash': row[2],
+                'analysis_timestamp': row[3],
+                'analysis_results': json.loads(row[4]),
+                'total_records': row[5],
+                'total_columns': row[6],
+                'has_issues': bool(row[7])
             })
 
         return analyses
@@ -153,7 +201,7 @@ class AnalysisDatabase:
         cursor = conn.cursor()
 
         cursor.execute('''
-            SELECT analysis_id, dataset_name, analysis_timestamp,
+            SELECT analysis_id, dataset_name, file_hash, analysis_timestamp,
                    analysis_results, total_records, total_columns, has_issues
             FROM analyses
             WHERE analysis_id = ?
@@ -166,11 +214,12 @@ class AnalysisDatabase:
             return {
                 'analysis_id': row[0],
                 'dataset_name': row[1],
-                'analysis_timestamp': row[2],
-                'analysis_results': json.loads(row[3]),
-                'total_records': row[4],
-                'total_columns': row[5],
-                'has_issues': bool(row[6])
+                'file_hash': row[2],
+                'analysis_timestamp': row[3],
+                'analysis_results': json.loads(row[4]),
+                'total_records': row[5],
+                'total_columns': row[6],
+                'has_issues': bool(row[7])
             }
 
         return None
@@ -189,7 +238,7 @@ class AnalysisDatabase:
         cursor = conn.cursor()
 
         cursor.execute('''
-            SELECT analysis_id, dataset_name, analysis_timestamp,
+            SELECT analysis_id, dataset_name, file_hash, analysis_timestamp,
                    analysis_results, total_records, total_columns, has_issues
             FROM analyses
             WHERE dataset_name = ?
@@ -204,11 +253,12 @@ class AnalysisDatabase:
             analyses.append({
                 'analysis_id': row[0],
                 'dataset_name': row[1],
-                'analysis_timestamp': row[2],
-                'analysis_results': json.loads(row[3]),
-                'total_records': row[4],
-                'total_columns': row[5],
-                'has_issues': bool(row[6])
+                'file_hash': row[2],
+                'analysis_timestamp': row[3],
+                'analysis_results': json.loads(row[4]),
+                'total_records': row[5],
+                'total_columns': row[6],
+                'has_issues': bool(row[7])
             })
 
         return analyses

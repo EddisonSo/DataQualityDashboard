@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import pandas as pd
 import io
+import hashlib
 from typing import List, Optional
 from data_analyzer import DataQualityAnalyzer
 from database import AnalysisDatabase
@@ -26,6 +27,11 @@ app.add_middleware(
 db = AnalysisDatabase()
 
 
+def compute_file_hash(content: bytes) -> str:
+    """Compute SHA-256 hash of file content."""
+    return hashlib.sha256(content).hexdigest()
+
+
 @app.get("/")
 async def root():
     """Root endpoint."""
@@ -33,6 +39,7 @@ async def root():
         "message": "Data Quality Dashboard API",
         "version": "1.0.0",
         "endpoints": {
+            "/check-files": "POST - Check if files have been analyzed before",
             "/analyze": "POST - Analyze CSV files",
             "/history": "GET - Get all analysis history",
             "/history/{analysis_id}": "GET - Get specific analysis by ID",
@@ -47,6 +54,58 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+@app.post("/check-files")
+async def check_files(files: List[UploadFile] = File(...)):
+    """
+    Check if uploaded files have been analyzed before.
+    Returns information about previous analyses if found.
+    """
+    try:
+        print(f"[CHECK-FILES] Received {len(files)} file(s) to check")
+        file_checks = []
+
+        for file in files:
+            print(f"[CHECK-FILES] Checking file: {file.filename}")
+            # Validate file type
+            if not file.filename.endswith('.csv'):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File {file.filename} is not a CSV file"
+                )
+
+            # Read and hash file
+            contents = await file.read()
+            file_hash = compute_file_hash(contents)
+            print(f"[CHECK-FILES] File hash: {file_hash}")
+
+            # Check if this file has been analyzed before
+            previous_analysis = db.get_analysis_by_hash(file_hash)
+            print(f"[CHECK-FILES] Previous analysis found: {previous_analysis is not None}")
+
+            file_checks.append({
+                "filename": file.filename,
+                "file_hash": file_hash,
+                "previously_analyzed": previous_analysis is not None,
+                "previous_analysis": {
+                    "analysis_id": previous_analysis['analysis_id'],
+                    "analysis_timestamp": previous_analysis['analysis_timestamp'],
+                    "total_records": previous_analysis['total_records'],
+                    "total_columns": previous_analysis['total_columns'],
+                    "has_issues": previous_analysis['has_issues']
+                } if previous_analysis else None
+            })
+
+        return JSONResponse(content={
+            "success": True,
+            "file_checks": file_checks
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error checking files: {str(e)}")
 
 
 @app.post("/analyze")
@@ -74,6 +133,8 @@ async def analyze_csv(files: List[UploadFile] = File(...)):
 
             # Read CSV file
             contents = await file.read()
+            file_hash = compute_file_hash(contents)
+            print(f"[ANALYZE] Analyzing file: {file.filename}, hash: {file_hash}")
             df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
 
             # Analyze the data
@@ -81,8 +142,10 @@ async def analyze_csv(files: List[UploadFile] = File(...)):
             analysis = analyzer.analyze()
 
             # Save analysis to database
-            analysis_id = db.save_analysis(file.filename, analysis)
+            analysis_id = db.save_analysis(file.filename, file_hash, analysis)
+            print(f"[ANALYZE] Saved analysis with ID: {analysis_id}")
             analysis['analysis_id'] = analysis_id
+            analysis['file_hash'] = file_hash
 
             results.append(analysis)
 
@@ -115,6 +178,7 @@ async def analyze_single_csv(file: UploadFile = File(...)):
 
         # Read CSV file
         contents = await file.read()
+        file_hash = compute_file_hash(contents)
         df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
 
         # Analyze the data
@@ -122,8 +186,9 @@ async def analyze_single_csv(file: UploadFile = File(...)):
         analysis = analyzer.analyze()
 
         # Save analysis to database
-        analysis_id = db.save_analysis(file.filename, analysis)
+        analysis_id = db.save_analysis(file.filename, file_hash, analysis)
         analysis['analysis_id'] = analysis_id
+        analysis['file_hash'] = file_hash
 
         return JSONResponse(content={
             "success": True,
