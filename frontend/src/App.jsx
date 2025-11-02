@@ -3,6 +3,7 @@ import axios from 'axios'
 import './App.css'
 import DatasetResults from './components/DatasetResults'
 import AnalysisHistory from './components/AnalysisHistory'
+import DuplicateFileModal from './components/DuplicateFileModal'
 
 const API_URL = 'http://localhost:8000'
 
@@ -15,6 +16,8 @@ function App() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('upload')
   const [selectedAnalysis, setSelectedAnalysis] = useState(null)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [duplicateFiles, setDuplicateFiles] = useState([])
 
   const handleFileChange = (e) => {
     setFiles(e.target.files)
@@ -32,56 +35,29 @@ function App() {
     setResults(null)
 
     try {
-      console.log('Starting analysis, forceReanalyze:', forceReanalyze)
-
       // First, check if files have been analyzed before
       if (!forceReanalyze) {
-        console.log('Checking if files have been analyzed before...')
         const checkFormData = new FormData()
         Array.from(files).forEach(file => {
           checkFormData.append('files', file)
         })
 
-        console.log('Sending check-files request...')
         const checkResponse = await axios.post(`${API_URL}/check-files`, checkFormData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         })
 
-        console.log('File check response:', checkResponse.data)
-
         const previouslyAnalyzed = checkResponse.data.file_checks.filter(
           check => check.previously_analyzed
         )
 
-        console.log('Previously analyzed files:', previouslyAnalyzed)
-
         if (previouslyAnalyzed.length > 0) {
-          // Show confirmation dialog
-          const fileList = previouslyAnalyzed.map(f =>
-            `• ${f.filename} (analyzed on ${new Date(f.previous_analysis.analysis_timestamp).toLocaleString()})`
-          ).join('\n')
-
-          const message = `${previouslyAnalyzed.length} file(s) have been analyzed before:\n\n${fileList}\n\nDo you want to re-analyze or view the previous results?`
-
-          const reanalyze = window.confirm(
-            `${message}\n\nClick OK to RE-ANALYZE, or Cancel to view PREVIOUS RESULTS`
-          )
-
-          if (!reanalyze) {
-            // User chose to view previous results
-            const previousResults = previouslyAnalyzed.map(check => {
-              const prev = check.previous_analysis
-              // Fetch the full analysis
-              return axios.get(`${API_URL}/history/${prev.analysis_id}`)
-            })
-
-            const responses = await Promise.all(previousResults)
-            setResults(responses.map(r => r.data.analysis.analysis_results))
-            setLoading(false)
-            return
-          }
+          // Show custom modal instead of browser confirm
+          setDuplicateFiles(previouslyAnalyzed)
+          setShowDuplicateModal(true)
+          setLoading(false)
+          return
         }
       }
 
@@ -101,7 +77,6 @@ function App() {
       // Refresh history after new analysis
       fetchHistory()
     } catch (err) {
-      console.error('Error in handleAnalyze:', err)
       setError(err.response?.data?.detail || 'An error occurred while analyzing the files')
     } finally {
       setLoading(false)
@@ -139,6 +114,40 @@ function App() {
   const handleBackToHistory = () => {
     setSelectedAnalysis(null)
     setActiveTab('history')
+  }
+
+  const handleReanalyze = () => {
+    setShowDuplicateModal(false)
+    setDuplicateFiles([])
+    // Force re-analyze
+    handleAnalyze(true)
+  }
+
+  const handleViewPrevious = async () => {
+    setShowDuplicateModal(false)
+    setLoading(true)
+
+    try {
+      // Fetch the full analysis for each duplicate file
+      const previousResults = duplicateFiles.map(check => {
+        const prev = check.previous_analysis
+        return axios.get(`${API_URL}/history/${prev.analysis_id}`)
+      })
+
+      const responses = await Promise.all(previousResults)
+      setResults(responses.map(r => r.data.analysis.analysis_results))
+    } catch (err) {
+      setError('Failed to load previous results')
+    } finally {
+      setDuplicateFiles([])
+      setLoading(false)
+    }
+  }
+
+  const handleCancelDuplicateModal = () => {
+    setShowDuplicateModal(false)
+    setDuplicateFiles([])
+    setLoading(false)
   }
 
   // Fetch history on component mount
@@ -269,6 +278,15 @@ function App() {
           </>
         )}
       </div>
+
+      {showDuplicateModal && (
+        <DuplicateFileModal
+          files={duplicateFiles}
+          onReanalyze={handleReanalyze}
+          onViewPrevious={handleViewPrevious}
+          onCancel={handleCancelDuplicateModal}
+        />
+      )}
     </div>
   )
 }

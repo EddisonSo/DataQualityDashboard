@@ -63,11 +63,9 @@ async def check_files(files: List[UploadFile] = File(...)):
     Returns information about previous analyses if found.
     """
     try:
-        print(f"[CHECK-FILES] Received {len(files)} file(s) to check")
         file_checks = []
 
         for file in files:
-            print(f"[CHECK-FILES] Checking file: {file.filename}")
             # Validate file type
             if not file.filename.endswith('.csv'):
                 raise HTTPException(
@@ -78,11 +76,9 @@ async def check_files(files: List[UploadFile] = File(...)):
             # Read and hash file
             contents = await file.read()
             file_hash = compute_file_hash(contents)
-            print(f"[CHECK-FILES] File hash: {file_hash}")
 
             # Check if this file has been analyzed before
             previous_analysis = db.get_analysis_by_hash(file_hash)
-            print(f"[CHECK-FILES] Previous analysis found: {previous_analysis is not None}")
 
             file_checks.append({
                 "filename": file.filename,
@@ -134,7 +130,6 @@ async def analyze_csv(files: List[UploadFile] = File(...)):
             # Read CSV file
             contents = await file.read()
             file_hash = compute_file_hash(contents)
-            print(f"[ANALYZE] Analyzing file: {file.filename}, hash: {file_hash}")
             df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
 
             # Analyze the data
@@ -143,7 +138,6 @@ async def analyze_csv(files: List[UploadFile] = File(...)):
 
             # Save analysis to database
             analysis_id = db.save_analysis(file.filename, file_hash, analysis)
-            print(f"[ANALYZE] Saved analysis with ID: {analysis_id}")
             analysis['analysis_id'] = analysis_id
             analysis['file_hash'] = file_hash
 
