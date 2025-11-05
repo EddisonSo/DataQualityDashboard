@@ -403,6 +403,44 @@ function DatasetResults({ data }) {
           </div>
         )}
 
+        {/* Statistical Summary Section */}
+        {statistics && Object.keys(statistics).length > 0 && (
+          <div className="section">
+            <h3>
+              Statistical Summary
+              <span className="badge badge-info">
+                {Object.keys(statistics).length} numeric column{Object.keys(statistics).length !== 1 ? 's' : ''}
+              </span>
+            </h3>
+            <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+              <table className="column-table">
+                <thead>
+                  <tr>
+                    <th>Column</th>
+                    <th>Mean</th>
+                    <th>Median</th>
+                    <th>Min</th>
+                    <th>Max</th>
+                    <th>Std Dev</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(statistics).map(([colName, stats], idx) => (
+                    <tr key={idx}>
+                      <td><strong>{colName}</strong></td>
+                      <td>{stats.mean !== null ? stats.mean : <span style={{ color: '#cbd5e0', fontStyle: 'italic' }}>N/A</span>}</td>
+                      <td>{stats.median !== null ? stats.median : <span style={{ color: '#cbd5e0', fontStyle: 'italic' }}>N/A</span>}</td>
+                      <td>{stats.min !== null ? stats.min : <span style={{ color: '#cbd5e0', fontStyle: 'italic' }}>N/A</span>}</td>
+                      <td>{stats.max !== null ? stats.max : <span style={{ color: '#cbd5e0', fontStyle: 'italic' }}>N/A</span>}</td>
+                      <td>{stats.std !== null ? stats.std : <span style={{ color: '#cbd5e0', fontStyle: 'italic' }}>N/A</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Missing Value Analysis Section */}
         <div className="section">
           <h3>Missing Value Analysis</h3>

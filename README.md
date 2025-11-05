@@ -11,16 +11,17 @@ data-quality-dashboard/
 │   ├── data_analyzer.py # Data quality analysis logic
 │   ├── database.py      # SQLite database operations
 │   ├── requirements.txt # Python dependencies
-│   ├── .env            # Environment variables (create from .env.example)
+│   ├── .env            # Environment variables (update with your values)
+│   ├── .env.example    # Environment variables template
 │   └── Dockerfile      # Docker configuration
 ├── frontend/            # React frontend
 │   ├── src/            # Source code
 │   ├── package.json    # Node dependencies
-│   ├── .env            # Environment variables (create from .env.example)
+│   ├── .env            # Environment variables (update with your values)
+│   ├── .env.example    # Environment variables template
 │   ├── Dockerfile      # Docker configuration
 │   └── nginx.conf      # Nginx configuration
-├── docker-compose.yml  # Docker Compose orchestration
-└── sample-data/        # Sample CSV files for testing
+└── docker-compose.yml  # Docker Compose orchestration
 ```
 
 ## Features
@@ -31,7 +32,8 @@ data-quality-dashboard/
 - **Invalid Format Detection**: Validates email formats, dates, ages, and other field-specific patterns
 - **Logical Inconsistency Detection**: Identifies business rule violations (e.g., selling price < cost price)
 - **Duplicate Detection**: Finds duplicate records (excluding primary keys)
-- **Statistical Analysis**: Provides summary statistics for all numeric columns
+- **Statistical Outlier Detection**: Uses IQR (Interquartile Range) method to identify outliers in numeric columns with detailed statistical context
+- **Statistical Summary**: Displays mean, median, min, max, and standard deviation for all numeric columns
 - **Column Profiling**: Detailed analysis of each column's data type, completeness, and uniqueness
 
 ### User Interface
@@ -68,19 +70,15 @@ cd data-quality-dashboard
 
 2. **Configure environment variables**:
 
-Create backend environment file:
-```bash
-cp backend/.env.example backend/.env
-```
+The project includes `.env` files that are pre-configured for Docker deployment. You should update these files with your own values:
 
-Edit `backend/.env` and set your API key:
+Edit `backend/.env` and configure:
 ```env
+# API Key for authentication - generate a secure random key
 API_KEY=your-secure-api-key-here
-```
 
-Create frontend environment file:
-```bash
-cp frontend/.env.example frontend/.env
+# CORS Configuration - comma-separated list of allowed origins
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8000
 ```
 
 Edit `frontend/.env` and set the same API key:
@@ -88,6 +86,8 @@ Edit `frontend/.env` and set the same API key:
 VITE_API_URL=http://localhost:8000
 VITE_API_KEY=your-secure-api-key-here
 ```
+
+**Note**: The `.env` files are included in the repository to simplify Docker deployment. Ensure you change the default API key before deploying to production.
 
 3. **Start the application**:
 ```bash
@@ -149,11 +149,7 @@ When you first use the application:
 
 ## Sample Data
 
-The `sample-data` directory contains example CSV files with intentional data quality issues:
-
-- `customers.csv` - Customer data with missing values, invalid emails, and duplicates
-- `inventory.csv` - Product inventory with logical inconsistencies
-- `transactions.csv` - Transaction records with invalid values and pricing errors
+You can test the application with your own CSV files containing data to analyze. The analyzer automatically detects common data quality issues based on column names and data patterns.
 
 ## API Documentation
 
@@ -231,6 +227,7 @@ Health check endpoint.
 - **React**: UI library with hooks
 - **Vite**: Fast build tool and dev server
 - **Axios**: HTTP client
+- **Recharts**: Charting library for data visualizations
 - **CSS3**: Custom styling with gradients and animations
 
 ### DevOps
@@ -259,10 +256,18 @@ Health check endpoint.
 - Stock levels vs reorder thresholds
 - Custom business rules
 
-### Statistical Analysis
-- Mean, median, min, max, standard deviation
-- Distribution analysis
-- Outlier detection
+### Statistical Outlier Detection
+- Uses the IQR (Interquartile Range) method for robust outlier detection
+- Calculates Q1 (25th percentile), Q3 (75th percentile), and IQR = Q3 - Q1
+- Identifies values outside the range: [Q1 - 1.5×IQR, Q3 + 1.5×IQR]
+- Displays statistical details (Q1, Q3, IQR, bounds) for context
+- Shows full row data for all outlier records
+- Automatically analyzes all numeric columns
+
+### Statistical Summary
+- Mean, median, min, max, and standard deviation for all numeric columns
+- Provides distribution insights to understand data patterns
+- Handles missing values and edge cases gracefully
 
 ## Development
 
@@ -288,17 +293,15 @@ If you prefer to run the services directly without Docker:
 cd backend
 ```
 
-2. Create and configure environment file:
-```bash
-cp .env.example .env
-```
+2. Configure environment file:
 
-Edit `.env` and set your API key:
+Edit `backend/.env` and update the API key and CORS origins:
 ```env
 API_KEY=your-secure-api-key-here
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8000
 ```
 
-3. Create a virtual environment:
+3. Create a virtual environment (recommended):
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -325,12 +328,9 @@ The API will be available at `http://localhost:8000`
 cd frontend
 ```
 
-2. Create and configure environment file:
-```bash
-cp .env.example .env
-```
+2. Configure environment file:
 
-Edit `.env` and set your API key:
+Edit `frontend/.env` and update with the same API key used in the backend:
 ```env
 VITE_API_URL=http://localhost:8000
 VITE_API_KEY=your-secure-api-key-here
@@ -365,9 +365,18 @@ The built files will be in the `dist` directory, ready to be served by any stati
 All file upload endpoints are protected with API key authentication:
 
 1. **Set a secure API key**: Use a strong, randomly generated key for production
-2. **Environment variables**: Never commit `.env` files to version control
+2. **Environment variables**: The `.env` files are included in the repository for Docker deployment convenience, but ensure you update the default API key
 3. **Key rotation**: Change your API key periodically
 4. **Browser storage**: The frontend stores the API key in localStorage for convenience
+
+### CORS Configuration
+
+The backend supports Cross-Origin Resource Sharing (CORS) configuration:
+
+1. **Configure allowed origins**: Edit `CORS_ORIGINS` in `backend/.env` with a comma-separated list of allowed origins
+2. **Default origins**: Includes `http://localhost:3000`, `http://localhost:5173`, and `http://localhost:8000`
+3. **Production deployment**: Add your production domain(s) to the CORS_ORIGINS list
+4. **Example**: `CORS_ORIGINS=http://localhost:3000,https://yourdomain.com,https://api.yourdomain.com`
 
 ### Generating a Secure API Key
 
@@ -381,8 +390,9 @@ openssl rand -base64 32
 
 ### Security Best Practices
 
-- Keep your `.env` files private (already in `.gitignore`)
+- Update the default API key in `.env` files before deployment
 - Use HTTPS in production
+- Configure CORS_ORIGINS to only allow trusted domains
 - Regularly update dependencies
 - Review and limit file upload sizes
 - Monitor analysis history for unusual activity
