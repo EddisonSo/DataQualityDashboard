@@ -11,6 +11,7 @@ function DatasetResults({ data }) {
     invalid_values,
     duplicates,
     logical_issues,
+    outliers,
     statistics,
     column_details
   } = data
@@ -19,7 +20,8 @@ function DatasetResults({ data }) {
     missing_values.total_missing_values +
     invalid_values.total_invalid_count +
     duplicates.total_duplicates +
-    logical_issues.total_issues
+    logical_issues.total_issues +
+    (outliers?.total_outlier_count || 0)
 
   const getSeverityClass = (percentage) => {
     if (percentage > 10) return 'badge-danger'
@@ -73,6 +75,13 @@ function DatasetResults({ data }) {
           <div className="value">{logical_issues.total_issues.toLocaleString()}</div>
           <div style={{ fontSize: '0.875rem', opacity: 0.9, marginTop: '0.25rem' }}>
             {logical_issues.logical_inconsistencies.length} type{logical_issues.logical_inconsistencies.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <div className="summary-card">
+          <h4>Outliers</h4>
+          <div className="value">{outliers?.total_outlier_count?.toLocaleString() || 0}</div>
+          <div style={{ fontSize: '0.875rem', opacity: 0.9, marginTop: '0.25rem' }}>
+            {outliers?.outlier_patterns?.length || 0} column{(outliers?.outlier_patterns?.length || 0) !== 1 ? 's' : ''}
           </div>
         </div>
       </div>
@@ -277,6 +286,115 @@ function DatasetResults({ data }) {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Outliers Section */}
+        {outliers && outliers.outlier_patterns && outliers.outlier_patterns.length > 0 && (
+          <div className="section">
+            <h3>
+              Statistical Outliers (1.5×IQR Method)
+              <span className="badge badge-warning">
+                {outliers.outlier_patterns.length} column{outliers.outlier_patterns.length !== 1 ? 's' : ''}
+              </span>
+            </h3>
+            <div className="issue-list">
+              {outliers.outlier_patterns.map((item, idx) => (
+                <div key={idx} className="issue-item">
+                  <div className="issue-header">
+                    <span className="issue-title">{item.column}</span>
+                    <span className={`badge ${getSeverityClass(item.percentage)}`}>
+                      {item.count.toLocaleString()} outlier{item.count !== 1 ? 's' : ''} ({item.percentage}%)
+                    </span>
+                  </div>
+                  <div className="issue-description">
+                    Values outside the range [{item.lower_bound}, {item.upper_bound}]
+                  </div>
+
+                  {/* Statistical Details */}
+                  <div style={{
+                    marginTop: '0.75rem',
+                    padding: '0.75rem',
+                    background: '#f7fafc',
+                    borderRadius: '4px',
+                    fontSize: '0.875rem'
+                  }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem' }}>
+                      <div>
+                        <strong>Q1 (25%):</strong> {item.Q1}
+                      </div>
+                      <div>
+                        <strong>Q3 (75%):</strong> {item.Q3}
+                      </div>
+                      <div>
+                        <strong>IQR:</strong> {item.IQR}
+                      </div>
+                      <div>
+                        <strong>Lower Bound:</strong> {item.lower_bound}
+                      </div>
+                      <div>
+                        <strong>Upper Bound:</strong> {item.upper_bound}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Example Outlier Values */}
+                  {item.outlier_values && item.outlier_values.length > 0 && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem' }}>
+                        Example outlier values:
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#4a5568' }}>
+                        {item.outlier_values.join(', ')}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Outlier Rows Table */}
+                  {item.outlier_rows && item.outlier_rows.length > 0 && (
+                    <div style={{ marginTop: '0.75rem', overflowX: 'auto', maxWidth: '100%' }}>
+                      <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                        Affected records:
+                      </div>
+                      <table className="column-table">
+                        <thead>
+                          <tr>
+                            {Object.keys(item.outlier_rows[0]).map((col, i) => (
+                              <th key={i}>{col}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {item.outlier_rows.slice(0, 10).map((row, rowIdx) => (
+                            <tr key={rowIdx}>
+                              {Object.entries(row).map(([colName, val], valIdx) => (
+                                <td
+                                  key={valIdx}
+                                  style={colName === item.column ? {
+                                    background: '#fff5f5',
+                                    fontWeight: '600',
+                                    color: '#c53030'
+                                  } : {}}
+                                >
+                                  {val !== null && val !== undefined && val !== '' ? String(val) : (
+                                    <span style={{ color: '#cbd5e0', fontStyle: 'italic' }}>null</span>
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {item.outlier_rows.length > 10 && (
+                        <div style={{ fontSize: '0.875rem', color: '#718096', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                          Showing 10 of {item.outlier_rows.length} outlier records
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

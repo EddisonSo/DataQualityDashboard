@@ -43,6 +43,7 @@ class DataQualityAnalyzer:
             "invalid_values": self.analyze_invalid_values(),
             "duplicates": self.analyze_duplicates(),
             "logical_issues": self.analyze_logical_issues(),
+            "outliers": self.analyze_outliers(),
             "statistics": self.generate_statistics(),
             "column_details": self.analyze_columns()
         }
@@ -448,6 +449,80 @@ class DataQualityAnalyzer:
             }
 
         return stats
+
+    def analyze_outliers(self) -> Dict[str, Any]:
+        """
+        Detect outliers in numeric columns using the 1.5*IQR method.
+
+        For each numeric column:
+        - Calculate Q1 (25th percentile) and Q3 (75th percentile)
+        - Calculate IQR = Q3 - Q1
+        - Lower bound = Q1 - 1.5 * IQR
+        - Upper bound = Q3 + 1.5 * IQR
+        - Values outside these bounds are flagged as outliers
+        """
+        outlier_data = []
+        numeric_columns = self.df.select_dtypes(include=[np.number]).columns
+
+        for col in numeric_columns:
+            # Skip columns with all NaN values
+            if self.df[col].isna().all():
+                continue
+
+            # Get non-null values for calculation
+            non_null_values = self.df[col].dropna()
+
+            # Skip if not enough data points
+            if len(non_null_values) < 4:
+                continue
+
+            # Calculate quartiles and IQR
+            Q1 = non_null_values.quantile(0.25)
+            Q3 = non_null_values.quantile(0.75)
+            IQR = Q3 - Q1
+
+            # Skip if IQR is 0 (all values are the same)
+            if IQR == 0:
+                continue
+
+            # Calculate bounds
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+
+            # Identify outliers
+            outliers_mask = (self.df[col] < lower_bound) | (self.df[col] > upper_bound)
+            outlier_count = outliers_mask.sum()
+
+            if outlier_count > 0:
+                # Get full rows with outliers
+                outlier_rows = self._clean_for_json(self.df[outliers_mask])
+
+                # Get outlier values for examples
+                outlier_values = self.df.loc[outliers_mask, col].tolist()
+
+                # Helper function to safely round values
+                def safe_round(value):
+                    if value is None or np.isnan(value) or np.isinf(value):
+                        return None
+                    return round(float(value), 2)
+
+                outlier_data.append({
+                    "column": col,
+                    "count": int(outlier_count),
+                    "percentage": self._safe_percentage(outlier_count, self.total_records),
+                    "lower_bound": safe_round(lower_bound),
+                    "upper_bound": safe_round(upper_bound),
+                    "Q1": safe_round(Q1),
+                    "Q3": safe_round(Q3),
+                    "IQR": safe_round(IQR),
+                    "outlier_values": [safe_round(v) for v in outlier_values[:10]],  # Limit to 10 examples
+                    "outlier_rows": outlier_rows
+                })
+
+        return {
+            "outlier_patterns": outlier_data,
+            "total_outlier_count": sum(item['count'] for item in outlier_data)
+        }
 
     def _simplify_data_type(self, col_name: str, dtype) -> str:
         """Convert pandas dtype to simplified user-friendly type."""
